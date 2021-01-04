@@ -32,6 +32,7 @@ TTF_Font* gFont = NULL;
 SDL_Color White = { 255, 255, 255 };
 
 
+//game entity structs
 struct segment {
 	const int maxHP = 100000;
 	int currentHP = maxHP;
@@ -122,9 +123,7 @@ void close()
 void UpdateAndRenderPlayer(int w, int h, GameState* gameState) {
 	SDL_Surface* surface = IMG_Load("C:/Users/obish/Documents/Uni/GUH/Images/antmaker.png");
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(gRenderer, surface);
-	SDL_FreeSurface(surface);
-
-	float playerPos = 2;
+	SDL_FreeSurface(surface);	
 	SDL_Rect destination;
 	destination.x = ((gameState->currentPlayerPos * w) / 5) + 140;
 	destination.y = (4 * h / 5) - 25;
@@ -260,9 +259,23 @@ int main(int argc, char* args[])
 			while (SDL_PollEvent(&e) != 0)
 			{
 				//User requests quit
-				if (e.type == SDL_QUIT)
+				if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)
 				{
 					quit = true;
+				}
+				if (e.type == SDL_KEYDOWN) {
+					switch (e.key.keysym.sym) {
+					case SDLK_LEFT:
+						if (gameState.currentPlayerPos != 0) {
+							gameState.currentPlayerPos -= 1;
+						}
+						break;
+					case SDLK_RIGHT:
+						if (gameState.currentPlayerPos != 4) {
+							gameState.currentPlayerPos += 1;
+						}
+						break;
+					}
 				}
 			}
 			TTF_Init();
