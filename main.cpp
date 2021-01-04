@@ -20,7 +20,7 @@ static const float sEndAttackTime = 6.0f;
 bool init();
 void close();
 
-//The window we'll be rendering to
+//The window to be rendered to
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 
@@ -32,13 +32,13 @@ TTF_Font* gFont = NULL;
 SDL_Color White = { 255, 255, 255 };
 
 
+//game entity structs
 struct segment {
 	const int maxHP = 100000;
 	int currentHP = maxHP;
-	int maxPlayers;
-	int currentPlayers;
 	bool isAttacking = false;
 	bool isPreparing = false;
+	bool isPlayer = false;
 } seg1, seg2, seg3, seg4, seg5;
 
 struct player {
@@ -52,6 +52,7 @@ struct GameState {
 	float mEnemyPrepareCounter = sEnemyPrepareTime;
 	float mEnemyAttackCounter = sEnemyAttackTime;
 	float mEndAttackCounter = sEndAttackTime;
+	int currentPlayerPos = 2;
 	SDL_Texture* texture = NULL;
 };
 
@@ -122,27 +123,14 @@ void close()
 void UpdateAndRenderPlayer(int w, int h, GameState* gameState) {
 	SDL_Surface* surface = IMG_Load("C:/Users/obish/Documents/Uni/GUH/Images/antmaker.png");
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(gRenderer, surface);
-	SDL_FreeSurface(surface);
+	SDL_FreeSurface(surface);	
+	SDL_Rect destination;
+	destination.x = ((gameState->currentPlayerPos * w) / 5) + 140;
+	destination.y = (4 * h / 5) - 25;
+	destination.w = 100;
+	destination.h = 100;
+	SDL_RenderCopy(gRenderer, texture, NULL, &destination);
 
-	for (int i = 0; i < 5; i++) {
-		if (gameState->mSegment[i]->currentPlayers > 0 && gameState->mSegment[i]->currentPlayers < 5) {
-			SDL_Rect destination;
-			destination.x = ((i * w) / 5) + 150;
-			destination.y = 4 * h / 5;
-			destination.w = 50;
-			destination.h = 50;
-			SDL_RenderCopy(gRenderer, texture, NULL, &destination);
-		}
-		else if (gameState->mSegment[i]->currentPlayers >= 5) {
-			float sizeMod = (gameState->mSegment[i]->currentPlayers - 5) * 5;
-			SDL_Rect destination;
-			destination.x = ((i * w) / 5) + (150 - (sizeMod / 5));
-			destination.y = (4 * h / 5) - (sizeMod / 2);
-			destination.w = 50 + sizeMod;
-			destination.h = 50 + sizeMod;
-			SDL_RenderCopy(gRenderer, texture, NULL, &destination);
-		}
-	}
 }
 
 void UpdateAndRenderBullets() {
@@ -190,22 +178,19 @@ void UpdateAndRenderEnemies(int w, int h, GameState* gameState, float dt, SDL_Te
 			SDL_RenderCopy(gRenderer, HPMessage, NULL, &HPMessage_rect);
 			SDL_FreeSurface(HPsurfaceMessage);
 		}
-		//display player text
-		gameState->mSegment[i]->currentPlayers = i * 5;
-		std::string playerText = "PLAYERS: " + std::to_string(gameState->mSegment[i]->currentPlayers);
-		char const* pchar = playerText.c_str();
-		SDL_Surface* surfaceMessage = TTF_RenderText_Solid(gFont, pchar, White);
-		SDL_Texture* Message = SDL_CreateTextureFromSurface(gRenderer, surfaceMessage);
-		SDL_Rect Message_rect;
-		Message_rect.x = (i * w / 5) + 20;
-		Message_rect.y = h - 70;
-		Message_rect.w = 100;
-		Message_rect.h = 20;
-		SDL_RenderCopy(gRenderer, Message, NULL, &Message_rect);
-		SDL_FreeSurface(surfaceMessage);
+
+		if (i == gameState->currentPlayerPos) {
+			gameState->mSegment[i]->isPlayer = true;
+		}
+		else {
+			gameState->mSegment[i]->isPlayer = false;
+		}
 
 		//reduce hp
-		gameState->mSegment[i]->currentHP -= gameState->mSegment[i]->currentPlayers;
+		if (gameState->mSegment[i]->isPlayer == true) {
+			gameState->mSegment[i]->currentHP -= 5;		//temp value, will be adjusted for balancing
+		}
+
 
 		//check if is preparing
 		if (gameState->mSegment[i]->isPreparing == true) {
@@ -274,9 +259,23 @@ int main(int argc, char* args[])
 			while (SDL_PollEvent(&e) != 0)
 			{
 				//User requests quit
-				if (e.type == SDL_QUIT)
+				if (e.type == SDL_QUIT || e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)
 				{
 					quit = true;
+				}
+				if (e.type == SDL_KEYDOWN) {
+					switch (e.key.keysym.sym) {
+					case SDLK_LEFT:
+						if (gameState.currentPlayerPos != 0) {
+							gameState.currentPlayerPos -= 1;
+						}
+						break;
+					case SDLK_RIGHT:
+						if (gameState.currentPlayerPos != 4) {
+							gameState.currentPlayerPos += 1;
+						}
+						break;
+					}
 				}
 			}
 			TTF_Init();
