@@ -41,11 +41,6 @@ struct segment {
 	bool isPlayer = false;
 } seg1, seg2, seg3, seg4, seg5;
 
-struct player {
-	bool isAlive = true;
-	int lives = 3;
-	std::string name;
-};
 
 struct GameState {
 	std::vector<segment*> mSegment{ &seg1, &seg2, &seg3, &seg4, &seg5 };
@@ -54,6 +49,10 @@ struct GameState {
 	float mEndAttackCounter = sEndAttackTime;
 	int currentPlayerPos = 2;
 	SDL_Texture* texture = NULL;
+
+	bool isAlive = true;
+	bool isInvincible = false;
+	int lives = 3;
 };
 
 
@@ -121,16 +120,30 @@ void close()
 
 
 void UpdateAndRenderPlayer(int w, int h, GameState* gameState) {
-	SDL_Surface* surface = IMG_Load("C:/Users/obish/Documents/Uni/GUH/Images/antmaker.png");
-	SDL_Texture* texture = SDL_CreateTextureFromSurface(gRenderer, surface);
-	SDL_FreeSurface(surface);	
-	SDL_Rect destination;
-	destination.x = ((gameState->currentPlayerPos * w) / 5) + 140;
-	destination.y = (4 * h / 5) - 25;
-	destination.w = 100;
-	destination.h = 100;
-	SDL_RenderCopy(gRenderer, texture, NULL, &destination);
+	if (gameState->isAlive == true) {
+		SDL_Surface* surface = IMG_Load("C:/Users/obish/Documents/Uni/GUH/Images/antmaker.png");
+		SDL_Texture* texture = SDL_CreateTextureFromSurface(gRenderer, surface);
+		SDL_FreeSurface(surface);
+		SDL_Rect destination;
+		destination.x = ((gameState->currentPlayerPos * w) / 5) + 140;
+		destination.y = (4 * h / 5) - 25;
+		destination.w = 100;
+		destination.h = 100;
+		SDL_RenderCopy(gRenderer, texture, NULL, &destination);
 
+		//lives text
+		std::string playerText = "LIVES: " + std::to_string(gameState->lives);
+		char const* pchar = playerText.c_str();
+		SDL_Surface* surfaceMessage = TTF_RenderText_Solid(gFont, pchar, White);
+		SDL_Texture* Message = SDL_CreateTextureFromSurface(gRenderer, surfaceMessage);
+		SDL_Rect Message_rect;
+		Message_rect.x = 20;
+		Message_rect.y = h - 70;
+		Message_rect.w = 100;
+		Message_rect.h = 20;
+		SDL_RenderCopy(gRenderer, Message, NULL, &Message_rect);
+		SDL_FreeSurface(surfaceMessage);
+	}
 }
 
 void UpdateAndRenderBullets() {
@@ -196,7 +209,7 @@ void UpdateAndRenderEnemies(int w, int h, GameState* gameState, float dt, SDL_Te
 		if (gameState->mSegment[i]->isPreparing == true) {
 			gameState->mEnemyAttackCounter -= dt;
 			SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xEE, 0x00, 50);
-			SDL_Rect fillRect6 = { ((i)*w / 5), 0, (w / 5), h };
+			SDL_Rect fillRect6 = { ((i)*w / 5), 0, (w / 5), h };	
 			SDL_RenderFillRect(gRenderer, &fillRect6);
 			if (gameState->mEnemyAttackCounter < 0.0f)
 			{
@@ -206,6 +219,16 @@ void UpdateAndRenderEnemies(int w, int h, GameState* gameState, float dt, SDL_Te
 			}
 		}
 		else if (gameState->mSegment[i]->isAttacking == true) {
+			if (gameState->mSegment[i]->isPlayer == true && gameState->isInvincible == false) {
+				gameState->lives -= 1;
+				if (gameState->lives == 0) {
+					gameState->isAlive = false;
+				}
+				gameState->isInvincible = true;
+			}
+			else if (gameState->mSegment[i]->isPlayer == false && gameState->isInvincible == true) {
+				gameState->isInvincible = false;
+			}
 			gameState->mEndAttackCounter -= dt;
 			SDL_SetRenderDrawColor(gRenderer, 0xFF, 0x00, 0x00, 50);
 			SDL_Rect fillRect6 = { ((i)*w / 5), 0, (w / 5), h };
