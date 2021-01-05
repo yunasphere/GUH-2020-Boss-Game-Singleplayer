@@ -53,6 +53,8 @@ struct GameState {
 	bool isAlive = true;
 	bool isInvincible = false;
 	int lives = 3;
+
+	bool isGameOver = false;
 };
 
 
@@ -120,7 +122,7 @@ void close()
 
 
 void UpdateAndRenderPlayer(int w, int h, GameState* gameState) {
-	if (gameState->isAlive == true) {
+	if (gameState->isAlive) {
 		SDL_Surface* surface = IMG_Load("C:/Users/obish/Documents/Uni/GUH/Images/antmaker.png");
 		SDL_Texture* texture = SDL_CreateTextureFromSurface(gRenderer, surface);
 		SDL_FreeSurface(surface);
@@ -143,6 +145,9 @@ void UpdateAndRenderPlayer(int w, int h, GameState* gameState) {
 		Message_rect.h = 20;
 		SDL_RenderCopy(gRenderer, Message, NULL, &Message_rect);
 		SDL_FreeSurface(surfaceMessage);
+	}
+	else {
+		gameState->isGameOver = true;
 	}
 }
 
@@ -200,13 +205,13 @@ void UpdateAndRenderEnemies(int w, int h, GameState* gameState, float dt, SDL_Te
 		}
 
 		//reduce hp
-		if (gameState->mSegment[i]->isPlayer == true) {
+		if (gameState->mSegment[i]->isPlayer) {
 			gameState->mSegment[i]->currentHP -= 5;		//temp value, will be adjusted for balancing
 		}
 
 
 		//check if is preparing
-		if (gameState->mSegment[i]->isPreparing == true) {
+		if (gameState->mSegment[i]->isPreparing) {
 			gameState->mEnemyAttackCounter -= dt;
 			SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xEE, 0x00, 50);
 			SDL_Rect fillRect6 = { ((i)*w / 5), 0, (w / 5), h };	
@@ -218,15 +223,15 @@ void UpdateAndRenderEnemies(int w, int h, GameState* gameState, float dt, SDL_Te
 				gameState->mSegment[i]->isAttacking = true;
 			}
 		}
-		else if (gameState->mSegment[i]->isAttacking == true) {
-			if (gameState->mSegment[i]->isPlayer == true && gameState->isInvincible == false) {
+		else if (gameState->mSegment[i]->isAttacking) {
+			if (gameState->mSegment[i]->isPlayer && !gameState->isInvincible) {
 				gameState->lives -= 1;
 				if (gameState->lives == 0) {
 					gameState->isAlive = false;
 				}
 				gameState->isInvincible = true;
 			}
-			else if (gameState->mSegment[i]->isPlayer == false && gameState->isInvincible == true) {
+			else if (!gameState->mSegment[i]->isPlayer && gameState->isInvincible) {
 				gameState->isInvincible = false;
 			}
 			gameState->mEndAttackCounter -= dt;
@@ -313,15 +318,14 @@ int main(int argc, char* args[])
 			int w, h;
 			w = dm.w;
 			h = dm.h;
-			//std::clock_t c_start = std::clock();
-			//float dt = c_start;
-			//dt = (dt > 0.01666f ? 0.01666f : dt);
 			float dt = 0.01666f;
-			UpdateAndRenderEnemies(w, h, &gameState, dt, gameState.texture);
-			UpdateAndRenderPlayer(w, h, &gameState);
+			if (!gameState.isGameOver) {
+				UpdateAndRenderEnemies(w, h, &gameState, dt, gameState.texture);
+				UpdateAndRenderPlayer(w, h, &gameState);
 
-			//Update screen
-			SDL_RenderPresent(gRenderer);
+				//Update screen
+				SDL_RenderPresent(gRenderer);
+			}
 		}
 	}
 
