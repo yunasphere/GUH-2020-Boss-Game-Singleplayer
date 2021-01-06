@@ -13,7 +13,7 @@ int SCREEN_HEIGHT = 480;
 static const float sEnemyPrepareTime = 12.0f;
 static const float sEnemyAttackTime = 6.0f;
 static const float sEndAttackTime = 6.0f;
-static const int maxHP = 10000;
+static const int maxHP = 1000;
 
 
 
@@ -36,6 +36,7 @@ SDL_Color White = { 255, 255, 255 };
 //game entity structs
 struct segment {
 	int currentHP = maxHP;
+	bool isAlive = true;
 	bool isAttacking = false;
 	bool isPreparing = false;
 	bool isPlayer = false;
@@ -55,6 +56,7 @@ struct GameState {
 	int lives = 3;
 
 	bool isGameOver = false;
+	bool isWin = false;
 };
 
 
@@ -154,14 +156,41 @@ void Restart(GameState* gameState)
 	gameState->isInvincible = false;
 	gameState->lives = 3;
 
+	gameState->isWin = false;
 	gameState->isGameOver = false;
 
 	for (int i = 0; i < 5; i++) {
 		gameState->mSegment[i]->currentHP = maxHP;
+		gameState->mSegment[i]->isAlive = true;
 		gameState->mSegment[i]->isAttacking = false;
 		gameState->mSegment[i]->isPreparing = false;
 		gameState->mSegment[i]->isPlayer = false;
 	}
+
+	
+}
+
+void Win(int w, int h, GameState* gameState)
+{
+	//wintext
+	SDL_Surface* surfaceMessage = TTF_RenderText_Solid(gFont, "VICTORY", White);
+	SDL_Texture* Message1 = SDL_CreateTextureFromSurface(gRenderer, surfaceMessage);
+	SDL_Rect Message_rect;
+	Message_rect.x = w / 2 - 100;
+	Message_rect.y = h / 2 - 100;
+	Message_rect.w = 200;
+	Message_rect.h = 60;
+	SDL_RenderCopy(gRenderer, Message1, NULL, &Message_rect);
+
+	SDL_Surface* surfaceMessage2 = TTF_RenderText_Solid(gFont, "PRESS SPACE TO RESTART", White);
+	SDL_Texture* Message2 = SDL_CreateTextureFromSurface(gRenderer, surfaceMessage2);
+	SDL_Rect Message2_rect;
+	Message2_rect.x = w / 2 - 110;
+	Message2_rect.y = h / 2;
+	Message2_rect.w = 220;
+	Message2_rect.h = 30;
+	SDL_RenderCopy(gRenderer, Message2, NULL, &Message2_rect);
+	SDL_FreeSurface(surfaceMessage2);
 }
 
 
@@ -218,11 +247,21 @@ void UpdateAndRenderEnemies(int w, int h, GameState* gameState, float dt, SDL_Te
 
 	gFont = TTF_OpenFont("C:/Users/obish/Documents/Fonts/steinberg/Steinberg.ttf", 12);
 
+	//check for win
+	bool temp = true;
+	for (int i = 0; i < 5; i++) {
+		if (gameState->mSegment[i]->isAlive) {
+			temp = false;
+		}
+	}
+	if (temp == true) {
+		gameState->isWin = true;
+	}
 
 	SDL_Rect destination;
 	for (int i = 0; i < 5; i++) {
 		//if enemy is alive
-		if (gameState->mSegment[i]->currentHP > 0) {
+		if (gameState->mSegment[i]->isAlive) {
 			//render sprite
 			destination.x = (i * w / 5) + 20;
 			destination.y = 0;
@@ -256,6 +295,9 @@ void UpdateAndRenderEnemies(int w, int h, GameState* gameState, float dt, SDL_Te
 			gameState->mSegment[i]->currentHP -= 5;		//temp value, will be adjusted for balancing
 		}
 
+		if (gameState->mSegment[i]->currentHP == 0) {
+			gameState->mSegment[i]->isAlive = false;
+		}
 
 		//check if is preparing
 		if (gameState->mSegment[i]->isPreparing) {
@@ -351,7 +393,7 @@ int main(int argc, char* args[])
 						}
 						break;
 					case SDLK_SPACE:
-						if (gameState.isGameOver) {
+						if (gameState.isGameOver || gameState.isWin) {
 							Restart(&gameState);
 						}
 					}
@@ -370,7 +412,7 @@ int main(int argc, char* args[])
 			w = dm.w;
 			h = dm.h;
 			float dt = 0.01666f;
-			if (!gameState.isGameOver) {
+			if (!gameState.isGameOver && !gameState.isWin) {
 				UpdateAndRenderEnemies(w, h, &gameState, dt, gameState.texture);
 				UpdateAndRenderPlayer(w, h, &gameState);
 
@@ -379,6 +421,10 @@ int main(int argc, char* args[])
 			}
 			else if (gameState.isGameOver) {
 				GameOver(w, h, &gameState);
+				SDL_RenderPresent(gRenderer);
+			}
+			else if (gameState.isWin) {
+				Win(w, h, &gameState);
 				SDL_RenderPresent(gRenderer);
 			}
 		}
