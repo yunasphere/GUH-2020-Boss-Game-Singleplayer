@@ -13,6 +13,7 @@ int SCREEN_HEIGHT = 480;
 static const float sEnemyPrepareTime = 12.0f;
 static const float sEnemyAttackTime = 6.0f;
 static const float sEndAttackTime = 6.0f;
+static const int maxHP = 10000;
 
 
 
@@ -34,7 +35,6 @@ SDL_Color White = { 255, 255, 255 };
 
 //game entity structs
 struct segment {
-	const int maxHP = 100000;
 	int currentHP = maxHP;
 	bool isAttacking = false;
 	bool isPreparing = false;
@@ -120,9 +120,55 @@ void close()
 	SDL_Quit();
 }
 
+void GameOver(int w, int h, GameState* gameState)
+{
+	//Game over text
+	SDL_Surface* surfaceMessage = TTF_RenderText_Solid(gFont, "GAME OVER", White);
+	SDL_Texture* Message1 = SDL_CreateTextureFromSurface(gRenderer, surfaceMessage);
+	SDL_Rect Message_rect;
+	Message_rect.x = w/2 - 125;
+	Message_rect.y = h/2 - 100;
+	Message_rect.w = 250;
+	Message_rect.h = 60;
+	SDL_RenderCopy(gRenderer, Message1, NULL, &Message_rect);
 
-void UpdateAndRenderPlayer(int w, int h, GameState* gameState) {
-	if (gameState->isAlive) {
+	SDL_Surface* surfaceMessage2 = TTF_RenderText_Solid(gFont, "PRESS SPACE TO RESTART", White);
+	SDL_Texture* Message2 = SDL_CreateTextureFromSurface(gRenderer, surfaceMessage2);
+	SDL_Rect Message2_rect;
+	Message2_rect.x = w / 2 - 110;
+	Message2_rect.y = h / 2 ;
+	Message2_rect.w = 220;
+	Message2_rect.h = 30;
+	SDL_RenderCopy(gRenderer, Message2, NULL, &Message2_rect);
+	SDL_FreeSurface(surfaceMessage2);
+}
+
+void Restart(GameState* gameState)
+{
+	gameState->mEnemyPrepareCounter = sEnemyPrepareTime;
+	gameState->mEnemyAttackCounter = sEnemyAttackTime;
+	gameState->mEndAttackCounter = sEndAttackTime;
+	gameState->currentPlayerPos = 2;
+
+	gameState->isAlive = true;
+	gameState->isInvincible = false;
+	gameState->lives = 3;
+
+	gameState->isGameOver = false;
+
+	for (int i = 0; i < 5; i++) {
+		gameState->mSegment[i]->currentHP = maxHP;
+		gameState->mSegment[i]->isAttacking = false;
+		gameState->mSegment[i]->isPreparing = false;
+		gameState->mSegment[i]->isPlayer = false;
+	}
+}
+
+
+void UpdateAndRenderPlayer(int w, int h, GameState* gameState)
+{
+	if (gameState->isAlive)
+	{
 		SDL_Surface* surface = IMG_Load("C:/Users/obish/Documents/Uni/GUH/Images/antmaker.png");
 		SDL_Texture* texture = SDL_CreateTextureFromSurface(gRenderer, surface);
 		SDL_FreeSurface(surface);
@@ -146,7 +192,8 @@ void UpdateAndRenderPlayer(int w, int h, GameState* gameState) {
 		SDL_RenderCopy(gRenderer, Message, NULL, &Message_rect);
 		SDL_FreeSurface(surfaceMessage);
 	}
-	else {
+	else
+	{
 		gameState->isGameOver = true;
 	}
 }
@@ -303,6 +350,10 @@ int main(int argc, char* args[])
 							gameState.currentPlayerPos += 1;
 						}
 						break;
+					case SDLK_SPACE:
+						if (gameState.isGameOver) {
+							Restart(&gameState);
+						}
 					}
 				}
 			}
@@ -324,6 +375,10 @@ int main(int argc, char* args[])
 				UpdateAndRenderPlayer(w, h, &gameState);
 
 				//Update screen
+				SDL_RenderPresent(gRenderer);
+			}
+			else if (gameState.isGameOver) {
+				GameOver(w, h, &gameState);
 				SDL_RenderPresent(gRenderer);
 			}
 		}
